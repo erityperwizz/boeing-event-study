@@ -66,6 +66,14 @@ The script reads `data/ba.csv` and `data/spy.csv` and writes everything to `outp
 | `key_results.txt` | Headline numbers, formatted exactly as quoted in this README and the memo |
 | `Findings_Summary.pdf` | One-page memo for a non-technical reader |
 
+### Interactive view
+
+A small Streamlit page lets you pick any event window from day -5 to day +10 and see the cumulative abnormal return, t-stat, p-value, dollar impact, and charts for that window. It uses the same calculations as `event_study.py`.
+
+```bash
+streamlit run app.py
+```
+
 To refresh the data, go to the Nasdaq.com historical data page for [BA](https://www.nasdaq.com/market-activity/stocks/ba/historical) and [SPY](https://www.nasdaq.com/market-activity/etf/spy/historical), choose the 5Y range, click "Download historical data", and save the files as `data/ba.csv` and `data/spy.csv`.
 
 ## Limitations
