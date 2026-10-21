@@ -1,0 +1,16 @@
+estimation_window: November 23, 2022 to November 21, 2023
+alpha: 0.000559
+beta: 1.0003
+r_squared: 0.257
+residual_sd: 1.55%
+day0_actual_return: -8.03%
+day0_but_for_return: 1.48%
+day0_abnormal_return: -9.52%
+day0_t_stat: -6.13
+day0_p_value: < 0.001
+day0_value_change: -$14.46 billion
+jan5_close: $249.00
+path_end_date: January 23, 2024
+path_end_actual: $211.50
+path_end_but_for: $259.60
+path_end_gap_per_share: $48.10

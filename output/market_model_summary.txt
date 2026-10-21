@@ -1,0 +1,28 @@
+Estimation window: 2022-11-23 to 2023-11-21 (250 trading days, ending 30 trading days before 2024-01-08)
+alpha = 0.000559, beta = 1.0003, R-squared = 0.257, residual SD = 1.5513%
+
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                     BA   R-squared:                       0.257
+Model:                            OLS   Adj. R-squared:                  0.254
+Method:                 Least Squares   F-statistic:                     85.74
+Date:                Wed, 21 Oct 2026   Prob (F-statistic):           1.01e-17
+Time:                        15:30:36   Log-Likelihood:                 687.79
+No. Observations:                 250   AIC:                            -1372.
+Df Residuals:                     248   BIC:                            -1365.
+Df Model:                           1                                         
+Covariance Type:            nonrobust                                         
+==============================================================================
+                 coef    std err          t      P>|t|      [0.025      0.975]
+------------------------------------------------------------------------------
+const          0.0006      0.001      0.569      0.570      -0.001       0.002
+SPY            1.0003      0.108      9.260      0.000       0.787       1.213
+==============================================================================
+Omnibus:                       40.518   Durbin-Watson:                   1.993
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):              172.437
+Skew:                           0.544   Prob(JB):                     3.60e-38
+Kurtosis:                       6.921   Cond. No.                         110.
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
