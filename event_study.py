@@ -22,6 +22,7 @@ import statsmodels.api as sm
 from scipy import stats
 import matplotlib
 matplotlib.use("Agg")
+matplotlib.rcParams["text.parse_math"] = False   # treat "$" as a dollar sign, never as math markup
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.patches import Patch
