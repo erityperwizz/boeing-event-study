@@ -8,7 +8,7 @@
 
 ## Answer
 
-On Monday, January 8, 2024, the first trading day after the incident, Boeing stock returned **-8.03%** while a market model predicted **1.48%**. The difference, an abnormal return of **-9.52%**, is statistically significant (t = -6.13, p < 0.001). Applied to Boeing's market value, that is a change of **-$14.46 billion** in a single day.
+On Monday, January 8, 2024, the first trading day after the incident and the FAA grounding of 737 MAX 9 jets announced January 6, Boeing stock returned **-8.03%** while a market model predicted **1.48%**. The difference, an abnormal return of **-9.52%**, is statistically significant (t = -6.13, p < 0.001). That is an abnormal change in market value of **-$14.46 billion** in one day.
 
 By January 23, 2024 (day +10), Boeing closed at $211.50 against a but-for price of $259.60, a gap of **$48.10 per share**.
 
@@ -20,14 +20,14 @@ The day 0 result holds across 6 alternative model setups (abnormal return -9.76%
 
 Day 0 is the headline result. The longer windows are sensitivity checks, chosen before looking at the results, and they mix in later news.
 
-| Window | Dates | Abnormal return | t-stat | p-value | Change in market value |
+| Window | Dates | Abnormal return | t-stat | p-value | Abnormal change in market value |
 |---|---|---|---|---|---|
 | [0] | Jan 8 | -9.52% | -6.13 | < 0.001 | -$14.46 billion |
 | [0, +1] | Jan 8 to Jan 9 | -10.84% | -4.94 | < 0.001 | -$16.30 billion |
 | [0, +5] | Jan 8 to Jan 16 | -22.75% | -5.99 | < 0.001 | -$32.33 billion |
 | [0, +10] | Jan 8 to Jan 23 | -19.67% | -3.82 | < 0.001 | -$28.68 billion |
 
-The dollar column adds up each day's abnormal dollar change. The $48.10 per-share gap on the chart compounds returns forward from the January 5 close instead, so the two measures are close but not identical.
+The dollar column (an abnormal change in market value, not a loss or damages figure) adds up each day's abnormal dollar change. The $48.10 per-share gap on the chart compounds returns forward from the January 5 close instead, so the two measures are close but not identical.
 
 ### Daily abnormal returns, day -5 to day +10
 
@@ -53,7 +53,7 @@ This is a standard market model event study, the approach used in securities lit
 
 The main design (250-day estimation window ending 30 trading days before the event) was fixed in advance. Each row below changes one choice and reruns the same code. The last row skips the regression entirely and treats Boeing's abnormal return as its return minus SPY's.
 
-| Setup | Beta | Residual SD | Day 0 AR | Day 0 t-stat | CAR [0, +5] | CAR [0, +10] | Day 0 change in market value |
+| Setup | Beta | Residual SD | Day 0 AR | Day 0 t-stat | CAR [0, +5] | CAR [0, +10] | Day 0 abnormal change in market value |
 |---|---|---|---|---|---|---|---|
 | Main analysis: 250-day estimation window, 30-day gap | 1.0003 | 1.55% | -9.52% | -6.13 | -22.75% | -19.67% | -$14.46 billion |
 | Shorter estimation window (120 days) | 0.9592 | 1.61% | -9.40% | -5.84 | -22.33% | -18.85% | -$14.28 billion |
@@ -62,9 +62,31 @@ The main design (250-day estimation window ending 30 trading days before the eve
 | Longer gap (60 days) | 0.8762 | 1.72% | -9.38% | -5.45 | -22.84% | -19.71% | -$14.26 billion |
 | Market-adjusted model (alpha = 0, beta = 1) | 1.0000 | 1.55% | -9.46% | -6.11 | -22.42% | -19.05% | -$14.37 billion |
 
-Across all 6 setups the day 0 abnormal return ranges from -9.76% to -9.38%, the t-stat from -6.36 to -4.93, and the change in market value from -$14.83 billion to -$14.26 billion. Full results, including every window, are in [`output/sensitivity_analysis.csv`](output/sensitivity_analysis.csv).
+Across all 6 setups the day 0 abnormal return ranges from -9.76% to -9.38%, the t-stat from -6.36 to -4.93, and the abnormal change in market value from -$14.83 billion to -$14.26 billion. Full results, including every window, are in [`output/sensitivity_analysis.csv`](output/sensitivity_analysis.csv).
+
+### Additional robustness checks
+
+These checks change how the model is estimated rather than the window. They are kept separate from the table above.
+
+| Check | Estimation days | Beta | R-squared | Residual SD | Day 0 AR | Day 0 t-stat |
+|---|---|---|---|---|---|---|
+| Base case (250-day window, 30-day gap, simple returns) | 250 | 1.0003 | 0.257 | 1.55% | -9.52% | -6.13 |
+| Smaller gap (10 days) | 250 | 0.9970 | 0.238 | 1.51% | -9.50% | -6.28 |
+| Log returns instead of simple returns | 250 | 1.0035 | 0.259 | 1.55% | -9.84% | -6.37 |
+| 5 largest estimation-window residuals removed | 245 | 1.0280 | 0.327 | 1.35% | -9.52% | -7.05 |
+
+Across these checks the day 0 abnormal return ranges from -9.84% to -9.50% and the t-stat from -7.05 to -6.13. Source: [`output/robustness_table.csv`](output/robustness_table.csv).
 
 ## Statistical appendix
+
+### Formulas
+
+- Market model, fit by OLS on the estimation window: `R_BA,t = alpha + beta x R_SPY,t + e_t`
+- Expected (but-for) return on event day t: `E[R_BA,t] = alpha + beta x R_SPY,t`
+- Abnormal return: `AR_t = R_BA,t - E[R_BA,t]`
+- Cumulative abnormal return over days t1 to t2: `CAR = sum of AR_t`
+- Test statistics, with sigma the residual standard deviation and L the number of days: `t = AR_t / sigma` and `t = CAR / (sigma x sqrt(L))`, two-sided p-values from the t-distribution with 248 degrees of freedom
+- Abnormal change in market value: `AR_t x prior close x shares outstanding`, summed over the window
 
 ### Descriptive statistics, estimation window
 
@@ -78,7 +100,21 @@ The residuals average zero by construction. Lag-1 autocorrelation near zero supp
 
 ### Distribution-free check
 
-The t-test assumes roughly normal daily surprises. Without that assumption: over the 250-day estimation window the market model's daily residuals ranged from -5.37% to 8.65%, and 0 of 250 days had a surprise at least as large in absolute value as the day 0 abnormal return of -9.52%.
+The residuals have fat tails (excess kurtosis 4.02; Jarque-Bera test of normality p < 0.001), so the t-test p-values are approximate. Without assuming normality: over the 250-day estimation window the market model's daily residuals ranged from -5.37% to 8.65%, and 0 of 250 days had a surprise at least as large in absolute value as the day 0 abnormal return of -9.52%. In plain words, day 0 was larger than every daily surprise in the 250-day estimation window.
+
+### Largest surprises in the estimation window
+
+To check that the estimation window was not contaminated by unusual Boeing news, these are its 5 largest absolute residuals. At least two match Boeing-specific news. Removing all 5 and refitting leaves the day 0 abnormal return essentially unchanged (see the last row of the robustness table above).
+
+| Date | BA return | SPY return | Residual | t-stat | Known Boeing-specific news |
+|---|---|---|---|---|---|
+| July 26, 2023 | 8.72% | 0.02% | 8.65% | 5.58 | Boeing second-quarter 2023 earnings release |
+| April 14, 2023 | -5.56% | -0.24% | -5.37% | -3.46 | Boeing announced a 737 MAX supplier quality issue after the April 13 close |
+| December 2, 2022 | 4.03% | -0.12% | 4.09% | 2.64 | Not identified |
+| November 13, 2023 | 4.01% | -0.10% | 4.05% | 2.61 | Not identified |
+| February 2, 2023 | -2.52% | 1.46% | -4.03% | -2.60 | Not identified |
+
+Source: [`output/largest_estimation_residuals.csv`](output/largest_estimation_residuals.csv).
 
 ### Data notes
 
@@ -107,6 +143,8 @@ The script reads `data/ba.csv` and `data/spy.csv` and writes everything to `outp
 | `sensitivity_analysis.csv` | Results under 6 alternative model setups |
 | `descriptive_statistics.csv` | Summary statistics for the estimation window |
 | `data_notes.txt` | Data checks and cleaning steps |
+| `robustness_table.csv` | Day 0 result under additional robustness checks |
+| `largest_estimation_residuals.csv` | The 5 largest surprise days in the estimation window |
 
 ### Interactive view
 

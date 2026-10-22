@@ -72,10 +72,10 @@ def load_prices(path):
     return s.sort_index()
 
 
-def run_analysis(est_len=EST_LEN, gap=GAP):
+def run_analysis(est_len=EST_LEN, gap=GAP, log_returns=False):
     px = pd.concat([load_prices(DATA / "ba.csv").rename("BA"),
                     load_prices(DATA / "spy.csv").rename("SPY")], axis=1).dropna()
-    ret = px.pct_change().dropna()
+    ret = (np.log(px).diff() if log_returns else px.pct_change()).dropna()
 
     if EVENT_DAY not in ret.index:
         sys.exit(f"{EVENT_DAY.date()} is missing from the data. Check the date range.")
@@ -177,6 +177,36 @@ def sensitivity(r):
     return pd.DataFrame(rows)
 
 
+def robustness(r):
+    """Additional day 0 checks: a smaller gap, log returns, and refitting without the biggest outlier days."""
+    def day0(model, est, ev):
+        sigma = np.sqrt(model.scale)
+        d0 = ev[ev["day"] == 0].iloc[0]
+        ar = d0["BA"] - (model.params["const"] + model.params["SPY"] * d0["SPY"])
+        return {"beta": model.params["SPY"], "r_squared": model.rsquared, "residual_sd": sigma,
+                "day0_abnormal_return": ar, "day0_t_stat": ar / sigma, "estimation_days": len(est)}
+
+    rows = [{"check": "Base case (250-day window, 30-day gap, simple returns)", **day0(r["model"], r["est"], r["ev"])}]
+    alt = run_analysis(EST_LEN, 10)
+    rows.append({"check": "Smaller gap (10 days)", **day0(alt["model"], alt["est"], alt["ev"])})
+    alt = run_analysis(log_returns=True)
+    rows.append({"check": "Log returns instead of simple returns", **day0(alt["model"], alt["est"], alt["ev"])})
+    # Drop the 5 estimation days with the largest absolute residuals and refit
+    keep = r["est"].drop(r["model"].resid.abs().nlargest(5).index)
+    refit = sm.OLS(keep["BA"], sm.add_constant(keep["SPY"])).fit()
+    rows.append({"check": "5 largest estimation-window residuals removed", **day0(refit, keep, r["ev"])})
+    return pd.DataFrame(rows)
+
+
+def largest_residuals(r, n=5):
+    """The biggest surprise days in the estimation window, to check it was not contaminated by unusual news."""
+    res = r["model"].resid
+    top = res.abs().nlargest(n).index
+    out = r["est"].loc[top, ["BA", "SPY"]].assign(residual=res[top], t_stat=res[top] / r["sigma"])
+    out.index.name = "date"
+    return out
+
+
 def descriptive_stats(r):
     """Summary statistics for the estimation window, including checks on the model's assumptions."""
     est = r["est"]
@@ -215,11 +245,12 @@ def data_notes(r):
     return "\n".join(lines) + "\n"
 
 
-def key_results(r, sens):
+def key_results(r, sens, rob):
     """Headline numbers as formatted strings. The README and PDF quote these exactly."""
     d0 = r["car_tbl"].iloc[0]
     end = r["prices"].iloc[-1]
     res = r["model"].resid
+    jb = stats.jarque_bera(res)
     return {
         "estimation_window": f"{r['est'].index[0]:%B %d, %Y} to {r['est'].index[-1]:%B %d, %Y}",
         "alpha": f"{r['alpha']:.6f}",
@@ -244,6 +275,11 @@ def key_results(r, sens):
                                          f"{usd_bn(sens['day0_value_change_usd'].max())}"),
         "estimation_residual_range": f"{pct(res.min())} to {pct(res.max())}",
         "estimation_days_as_large_as_day0": f"{(res.abs() >= abs(d0['CAR'])).sum()} of {len(res)}",
+        "residual_excess_kurtosis": f"{res.kurt():.2f}",
+        "residual_jarque_bera_p_value": pval(jb.pvalue),
+        "robustness_day0_range": (f"{pct(rob['day0_abnormal_return'].min())} to "
+                                  f"{pct(rob['day0_abnormal_return'].max())}"),
+        "robustness_day0_t_range": f"{rob['day0_t_stat'].min():.2f} to {rob['day0_t_stat'].max():.2f}",
     }
 
 
@@ -349,11 +385,11 @@ def findings_pdf(r, k):
          "door plug incident, separate from normal market movement?")
 
     heading("Answer")
-    text(f"On Monday, January 8, 2024, the first trading day after the incident, Boeing stock returned "
-         f"{k['day0_actual_return']} while the market model predicted {k['day0_but_for_return']}. The "
-         f"difference, an abnormal return of {k['day0_abnormal_return']}, is statistically significant "
-         f"(t = {k['day0_t_stat']}, p {k['day0_p_value']}). Applied to Boeing's market value, this is a "
-         f"change of {k['day0_value_change']} in a single day. By {k['path_end_date']}, the actual price was "
+    text(f"On Monday, January 8, 2024, the first trading day after the incident and the FAA grounding of 737 MAX 9 "
+         f"jets announced January 6, Boeing stock returned {k['day0_actual_return']} while the market model "
+         f"predicted {k['day0_but_for_return']}. The difference, an abnormal return of {k['day0_abnormal_return']}, "
+         f"is statistically significant (t = {k['day0_t_stat']}, p {k['day0_p_value']}): an abnormal change in "
+         f"market value of {k['day0_value_change']} in one day. By {k['path_end_date']}, the actual price was "
          f"{k['path_end_actual']} against a but-for price of {k['path_end_but_for']}, a gap of "
          f"{k['path_end_gap_per_share']} per share. The day 0 result holds across {k['sensitivity_setups']} "
          f"alternative model setups (abnormal return {k['sensitivity_day0_range']}).", gap=0.1)
@@ -367,8 +403,8 @@ def findings_pdf(r, k):
     y[0] -= ih + 0.12
 
     heading("Cumulative abnormal return by event window")
-    cols = ["Window", "Dates", "Abnormal return", "t-stat", "p-value", "Change in market value"]
-    xs = [0, 0.95, 2.6, 3.85, 4.75, 5.75]
+    cols = ["Window", "Dates", "Abnormal return", "t-stat", "p-value", "Abnormal value change"]
+    xs = [0, 0.85, 2.3, 3.7, 4.45, 5.3]
     for x, c in zip(xs, cols):
         fig.text((left + x) / W, y[0] / H, c, fontsize=8.5, fontweight="bold", color=INK, va="top")
     y[0] -= 0.2
@@ -415,8 +451,11 @@ def main():
     sens = sensitivity(r)
     sens.round(6).to_csv(OUT / "sensitivity_analysis.csv", index=False)
     descriptive_stats(r).round(6).to_csv(OUT / "descriptive_statistics.csv", index=False)
+    rob = robustness(r)
+    rob.round(6).to_csv(OUT / "robustness_table.csv", index=False)
+    largest_residuals(r).round(6).to_csv(OUT / "largest_estimation_residuals.csv")
     (OUT / "data_notes.txt").write_text(data_notes(r))
-    k = key_results(r, sens)
+    k = key_results(r, sens, rob)
     with open(OUT / "key_results.txt", "w") as f:
         f.writelines(f"{name}: {v}\n" for name, v in k.items())
     chart_price(r)

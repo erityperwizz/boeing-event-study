@@ -1,0 +1,5 @@
+check,beta,r_squared,residual_sd,day0_abnormal_return,day0_t_stat,estimation_days
+"Base case (250-day window, 30-day gap, simple returns)",1.000252,0.256913,0.015513,-0.09516,-6.134339,250
+Smaller gap (10 days),0.997035,0.237799,0.015141,-0.095035,-6.276668,250
+Log returns instead of simple returns,1.003534,0.259249,0.015457,-0.098394,-6.365568,250
+5 largest estimation-window residuals removed,1.027978,0.327342,0.013506,-0.09524,-7.051754,245

@@ -20,3 +20,7 @@ sensitivity_day0_t_range: -6.36 to -4.93
 sensitivity_day0_value_range: -$14.83 billion to -$14.26 billion
 estimation_residual_range: -5.37% to 8.65%
 estimation_days_as_large_as_day0: 0 of 250
+residual_excess_kurtosis: 4.02
+residual_jarque_bera_p_value: < 0.001
+robustness_day0_range: -9.84% to -9.50%
+robustness_day0_t_range: -7.05 to -6.13

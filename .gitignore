@@ -2,3 +2,4 @@
 __pycache__/
 *.pyc
 EVENT_STUDY_SPEC.md
+ROBUSTNESS_SPEC.md
