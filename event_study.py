@@ -38,6 +38,13 @@ WINDOWS = [(0, 0), (0, 1), (0, 5), (0, 10)]
 SHARES_OUT = 610_135_205                  # Boeing FY2023 10-K cover page, as of January 24, 2024
 ALPHA_LEVEL = 0.05
 
+# Sensitivity checks: (estimation length, gap, description). The first row is the main analysis.
+SENSITIVITY = [(250, 30, "Main analysis: 250-day estimation window, 30-day gap"),
+               (120, 30, "Shorter estimation window (120 days)"),
+               (500, 30, "Longer estimation window (500 days)"),
+               (250, 0, "No gap before the event"),
+               (250, 60, "Longer gap (60 days)")]
+
 PURPLE, GRAY, RED, INK = "#5B2A86", "#8A8A8A", "#B03A2E", "#222222"
 
 
@@ -65,7 +72,7 @@ def load_prices(path):
     return s.sort_index()
 
 
-def run_analysis():
+def run_analysis(est_len=EST_LEN, gap=GAP):
     px = pd.concat([load_prices(DATA / "ba.csv").rename("BA"),
                     load_prices(DATA / "spy.csv").rename("SPY")], axis=1).dropna()
     ret = px.pct_change().dropna()
@@ -73,9 +80,9 @@ def run_analysis():
     if EVENT_DAY not in ret.index:
         sys.exit(f"{EVENT_DAY.date()} is missing from the data. Check the date range.")
     e = ret.index.get_loc(EVENT_DAY)
-    if e - GAP - EST_LEN < 0 or e + POST >= len(ret):
+    if e - gap - est_len < 0 or e + POST >= len(ret):
         sys.exit("Not enough history around the event. Download the 5Y range from Nasdaq.com.")
-    est = ret.iloc[e - GAP - EST_LEN: e - GAP]
+    est = ret.iloc[e - gap - est_len: e - gap]
 
     # 1. Market model, fit only on the estimation window
     model = sm.OLS(est["BA"], sm.add_constant(est["SPY"])).fit()
@@ -141,10 +148,78 @@ def save_tables(r):
         f.write(str(m.summary()))
 
 
-def key_results(r):
+def window_label(a, b):
+    return f"[{a}, +{b}]" if b else "[0]"
+
+
+def sensitivity(r):
+    """Rerun the study under alternative design choices to show the result does not hinge on them."""
+    rows = []
+    for est_len, gap, desc in SENSITIVITY:
+        alt = run_analysis(est_len, gap)
+        row = {"specification": desc, "beta": alt["beta"], "residual_sd": alt["sigma"]}
+        for _, c in alt["car_tbl"].iterrows():
+            row[f"CAR {c['window']}"], row[f"t {c['window']}"] = c["CAR"], c["t_stat"]
+        row["day0_value_change_usd"] = alt["car_tbl"].iloc[0]["abnormal_value_change_usd"]
+        rows.append(row)
+
+    # Market-adjusted model: skip the regression and assume alpha = 0, beta = 1
+    ev, est = r["ev"], r["est"]
+    ar = ev["BA"] - ev["SPY"]
+    sd = (est["BA"] - est["SPY"]).std()
+    row = {"specification": "Market-adjusted model (alpha = 0, beta = 1)", "beta": 1.0, "residual_sd": sd}
+    for a, b in WINDOWS:
+        w = ar[(ev["day"] >= a) & (ev["day"] <= b)]
+        row[f"CAR {window_label(a, b)}"] = w.sum()
+        row[f"t {window_label(a, b)}"] = w.sum() / (sd * np.sqrt(len(w)))
+    row["day0_value_change_usd"] = (ar * ev["prior_close"] * SHARES_OUT)[ev["day"] == 0].iloc[0]
+    rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def descriptive_stats(r):
+    """Summary statistics for the estimation window, including checks on the model's assumptions."""
+    est = r["est"]
+    series = {"BA daily return": est["BA"], "SPY daily return": est["SPY"],
+              "Market model residual": r["model"].resid}
+    return pd.DataFrame([{
+        "series": name, "observations": len(x), "mean": x.mean(), "median": x.median(),
+        "std_dev": x.std(), "min": x.min(), "max": x.max(), "skewness": x.skew(),
+        "excess_kurtosis": x.kurt(), "lag1_autocorrelation": x.autocorr(1),
+    } for name, x in series.items()])
+
+
+def data_notes(r):
+    """Document how the raw files were checked and cleaned, so every step can be audited."""
+    px, ev = r["px"], r["ev"]
+    lines = ["DATA NOTES", ""]
+    for name in ["ba.csv", "spy.csv"]:
+        raw = pd.read_csv(DATA / name)
+        dates = pd.to_datetime(raw["Date"], format="%m/%d/%Y")
+        lines.append(f"{name}: {len(raw)} rows, {dates.min().date()} to {dates.max().date()}, "
+                     f"{dates.duplicated().sum()} duplicate dates, {raw['Close/Last'].isna().sum()} missing closes, "
+                     f"rows with any blank field: {raw.isna().any(axis=1).sum()} (only Close/Last is used)")
+    holidays = pd.bdate_range(ev.index[0], ev.index[-1]).difference(px.index)
+    lines += [
+        f"Trading days present in both files after alignment: {len(px)}",
+        f"Daily returns computed: {len(px) - 1} (the first day has no prior close)",
+        "Cleaning: removed '$' and ',' from prices, parsed dates as MM/DD/YYYY, and sorted oldest first "
+        "(Nasdaq lists newest first). No rows were dropped for missing or invalid closes.",
+        "Weekdays inside the event period with no trading (market holidays, correctly skipped): "
+        + (", ".join(str(d.date()) for d in holidays) or "none"),
+        "Dividends: Boeing paid no dividend in this period, so its close-to-close return is its total "
+        "return. SPY closes are not dividend-adjusted, so ex-dividend days understate SPY's return slightly.",
+        f"Shares outstanding: {SHARES_OUT:,} as of January 24, 2024 (Boeing FY2023 Form 10-K cover page), "
+        "applied to every event day.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def key_results(r, sens):
     """Headline numbers as formatted strings. The README and PDF quote these exactly."""
     d0 = r["car_tbl"].iloc[0]
     end = r["prices"].iloc[-1]
+    res = r["model"].resid
     return {
         "estimation_window": f"{r['est'].index[0]:%B %d, %Y} to {r['est'].index[-1]:%B %d, %Y}",
         "alpha": f"{r['alpha']:.6f}",
@@ -162,6 +237,13 @@ def key_results(r):
         "path_end_actual": f"${end['actual']:.2f}",
         "path_end_but_for": f"${end['but_for']:.2f}",
         "path_end_gap_per_share": f"${end['gap_per_share']:.2f}",
+        "sensitivity_setups": f"{len(sens)}",
+        "sensitivity_day0_range": f"{pct(sens['CAR [0]'].min())} to {pct(sens['CAR [0]'].max())}",
+        "sensitivity_day0_t_range": f"{sens['t [0]'].min():.2f} to {sens['t [0]'].max():.2f}",
+        "sensitivity_day0_value_range": (f"{usd_bn(sens['day0_value_change_usd'].min())} to "
+                                         f"{usd_bn(sens['day0_value_change_usd'].max())}"),
+        "estimation_residual_range": f"{pct(res.min())} to {pct(res.max())}",
+        "estimation_days_as_large_as_day0": f"{(res.abs() >= abs(d0['CAR'])).sum()} of {len(res)}",
     }
 
 
@@ -273,7 +355,8 @@ def findings_pdf(r, k):
          f"(t = {k['day0_t_stat']}, p {k['day0_p_value']}). Applied to Boeing's market value, this is a "
          f"change of {k['day0_value_change']} in a single day. By {k['path_end_date']}, the actual price was "
          f"{k['path_end_actual']} against a but-for price of {k['path_end_but_for']}, a gap of "
-         f"{k['path_end_gap_per_share']} per share.", gap=0.1)
+         f"{k['path_end_gap_per_share']} per share. The day 0 result holds across {k['sensitivity_setups']} "
+         f"alternative model setups (abnormal return {k['sensitivity_day0_range']}).", gap=0.1)
 
     img = plt.imread(OUT / "actual_vs_but_for_price.png")
     ih = width * img.shape[0] / img.shape[1] * 0.86
@@ -329,7 +412,11 @@ def findings_pdf(r, k):
 def main():
     r = run_analysis()
     save_tables(r)
-    k = key_results(r)
+    sens = sensitivity(r)
+    sens.round(6).to_csv(OUT / "sensitivity_analysis.csv", index=False)
+    descriptive_stats(r).round(6).to_csv(OUT / "descriptive_statistics.csv", index=False)
+    (OUT / "data_notes.txt").write_text(data_notes(r))
+    k = key_results(r, sens)
     with open(OUT / "key_results.txt", "w") as f:
         f.writelines(f"{name}: {v}\n" for name, v in k.items())
     chart_price(r)

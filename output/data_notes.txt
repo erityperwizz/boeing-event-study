@@ -1,0 +1,10 @@
+DATA NOTES
+
+ba.csv: 1254 rows, 2021-10-21 to 2026-10-20, 0 duplicate dates, 0 missing closes, rows with any blank field: 0 (only Close/Last is used)
+spy.csv: 1254 rows, 2021-10-21 to 2026-10-20, 0 duplicate dates, 0 missing closes, rows with any blank field: 1 (only Close/Last is used)
+Trading days present in both files after alignment: 1254
+Daily returns computed: 1253 (the first day has no prior close)
+Cleaning: removed '$' and ',' from prices, parsed dates as MM/DD/YYYY, and sorted oldest first (Nasdaq lists newest first). No rows were dropped for missing or invalid closes.
+Weekdays inside the event period with no trading (market holidays, correctly skipped): 2024-01-01, 2024-01-15
+Dividends: Boeing paid no dividend in this period, so its close-to-close return is its total return. SPY closes are not dividend-adjusted, so ex-dividend days understate SPY's return slightly.
+Shares outstanding: 610,135,205 as of January 24, 2024 (Boeing FY2023 Form 10-K cover page), applied to every event day.

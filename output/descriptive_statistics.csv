@@ -1,0 +1,4 @@
+series,observations,mean,median,std_dev,min,max,skewness,excess_kurtosis,lag1_autocorrelation
+BA daily return,250,0.001102,0.001735,0.017959,-0.055621,0.087241,0.180858,2.264091,-0.014305
+SPY daily return,250,0.000542,0.00039,0.009101,-0.024462,0.031501,0.069635,0.044374,0.043717
+Market model residual,250,0.0,0.000421,0.015482,-0.053737,0.086528,0.547098,4.024531,0.002986

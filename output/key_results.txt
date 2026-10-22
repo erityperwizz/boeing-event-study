@@ -14,3 +14,9 @@ path_end_date: January 23, 2024
 path_end_actual: $211.50
 path_end_but_for: $259.60
 path_end_gap_per_share: $48.10
+sensitivity_setups: 6
+sensitivity_day0_range: -9.76% to -9.38%
+sensitivity_day0_t_range: -6.36 to -4.93
+sensitivity_day0_value_range: -$14.83 billion to -$14.26 billion
+estimation_residual_range: -5.37% to 8.65%
+estimation_days_as_large_as_day0: 0 of 250
