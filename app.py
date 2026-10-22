@@ -24,8 +24,8 @@ r = analysis()
 ev, sigma, dof = r["ev"], r["sigma"], r["dof"]
 
 st.title("Boeing Event Study")
-st.write("How much did Boeing's stock fall because of the January 5, 2024 Alaska Airlines Flight 1282 "
-         "door plug incident, separate from normal market movement? Day 0 is Monday, January 8, 2024, "
+st.write("How did Boeing's stock price react to the January 5, 2024 Alaska Airlines Flight 1282 door plug "
+         "incident and the FAA grounding that followed, separate from normal market movement? Day 0 is Monday, January 8, 2024, "
          "the first trading day after the incident.")
 
 a, b = st.slider("Event window (trading days relative to January 8, 2024)",

@@ -1,8 +1,8 @@
 """
 Boeing Event Study: Alaska Airlines Flight 1282 Door Plug Incident (January 5, 2024)
 
-Question: How much of Boeing's stock decline after the incident was caused by the
-event itself, rather than by normal market movement?
+Question: How did Boeing's stock price react to the January 5, 2024 Alaska Airlines Flight 1282
+door plug incident and the FAA grounding that followed, separate from normal market movement?
 
 Method: market model event study, the standard approach in securities litigation.
   1. Estimate how Boeing normally moves with the market (OLS: BA return on SPY return)
@@ -381,8 +381,8 @@ def findings_pdf(r, k):
     y[0] -= 0.12
 
     heading("Question")
-    text("How much shareholder value did Boeing lose because of the January 5, 2024 Alaska Airlines "
-         "door plug incident, separate from normal market movement?")
+    text("How did Boeing's stock price react to the January 5, 2024 Alaska Airlines Flight 1282 door plug "
+         "incident and the FAA grounding that followed, separate from normal market movement?")
 
     heading("Answer")
     text(f"On Monday, January 8, 2024, the first trading day after the incident and the FAA grounding of 737 MAX 9 "

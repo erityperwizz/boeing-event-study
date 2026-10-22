@@ -2,7 +2,7 @@
 
 ## Assignment
 
-**Question.** How much shareholder value did Boeing lose because of the January 5, 2024 Alaska Airlines Flight 1282 door plug incident, separate from normal market movement?
+**Question.** How did Boeing's stock price react to the January 5, 2024 Alaska Airlines Flight 1282 door plug incident and the FAA grounding that followed, separate from normal market movement?
 
 **Scope.** Measure the price impact of the incident on Boeing common stock: the abnormal return on the first trading day and over short windows after it, its statistical significance, and the matching change in market value. The analysis uses public data only. It does not estimate shareholder damages, which would also require a class period, an inflation ribbon and a trading model.
 
